@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nai Print — الصفحة الرئيسية</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#03040a;
+  --neon:#00e5ff;
+  --neon-alt:#2196f3;
+  --pane:#0a1224;
+  --muted:#9aa2b7;
+  --radius:14px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Poppins',sans-serif;
+  background:var(--bg);
+  color:#e7f4ff;
+  overflow-x:hidden;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
+  text-align:center;
+}
+
+h1{
+  font-size:48px;
+  margin-bottom:10px;
+  color:var(--neon);
+  text-shadow:0 0 6px var(--neon-alt);
+}
+
+p{
+  font-size:18px;
+  max-width:600px;
+  margin-bottom:30px;
+  color:var(--muted);
+}
+
+/* زر إنشاء لوحة بنفس تصميم service-card */
+.create-board{
+  background:rgba(0,10,30,0.7);
+  border:3px solid var(--neon);
+  border-radius:var(--radius);
+  padding:20px 40px;
+  font-size:20px;
+  font-weight:700;
+  color:#fff;
+  cursor:pointer;
+  text-shadow:0 0 6px var(--neon-alt);
+  box-shadow:
+    0 0 10px var(--neon),
+    0 0 25px var(--neon-alt) inset,
+    0 0 8px var(--neon) inset;
+  transition:0.3s ease-in-out;
+}
+.create-board:hover{
+  transform:translateY(-6px);
+  box-shadow:
+    0 0 20px var(--neon),
+    0 0 35px var(--neon-alt) inset,
+    0 0 15px var(--neon) inset;
+}
+
+/* Popup */
+.popup{
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background: rgba(0,0,0,0.75);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+}
+.popup-content{
+  background: rgba(0,10,30,0.9);
+  border:3px solid var(--neon);
+  border-radius:var(--radius);
+  padding:30px 40px;
+  max-width:400px;
+  width:90%;
+  box-shadow:
+    0 0 10px var(--neon),
+    0 0 25px var(--neon-alt) inset,
+    0 0 8px var(--neon) inset;
+  text-align:center;
+}
+.popup-content h2{
+  color:var(--neon);
+  text-shadow:0 0 8px var(--neon),0 0 12px var(--neon-alt);
+  margin-bottom:20px;
+}
+.popup-content label{
+  display:block;
+  margin:12px 0 6px;
+  color:#fff;
+}
+.popup-content input[type="number"], .popup-content select{
+  width:100%;
+  padding:10px;
+  border-radius:12px;
+  border:1px solid rgba(0,229,255,0.1);
+  background:rgba(0,229,255,0.03);
+  color:#fff;
+  margin-bottom:12px;
+}
+.popup-buttons{
+  display:flex;
+  justify-content:space-between;
+  margin-top:20px;
+}
+.popup-buttons button{
+  width:48%;
+  font-weight:700;
+  border-radius:var(--radius);
+  cursor:pointer;
+  padding:12px 20px;
+  border:none;
+  text-shadow:0 0 6px var(--neon-alt);
+  transition:0.3s ease-in-out;
+}
+/* زر إلغاء */
+#cancelBtn{
+  background:rgba(0,10,30,0.7);
+  border:3px solid var(--neon);
+  border-radius:var(--radius);
+  font-size:18px;
+  font-weight:700;
+  color:#fff;
+  box-shadow:
+    0 0 10px var(--neon),
+    0 0 25px var(--neon-alt) inset,
+    0 0 8px var(--neon) inset;
+}
+/* زر ابدأ الرسم بنفس تصميم service-card */
+#startBtn{
+  background:rgba(0,10,30,0.7);
+  border:3px solid var(--neon);
+  border-radius:var(--radius);
+  font-size:18px;
+  font-weight:700;
+  color:#fff;
+  box-shadow:
+    0 0 10px var(--neon),
+    0 0 25px var(--neon-alt) inset,
+    0 0 8px var(--neon) inset;
+}
+#startBtn:hover{
+  transform:translateY(-6px);
+  box-shadow:
+    0 0 20px var(--neon),
+    0 0 35px var(--neon-alt) inset,
+    0 0 15px var(--neon) inset;
+}
+</style>
+</head>
+<body>
+
+<h1>Nai Print</h1>
+<p>مرحبًا بك في موقع الرسم المتكامل! اختر إعدادات اللوحة وابدأ الرسم بسهولة.</p>
+<button class="create-board" id="createBtn">إنشاء لوحة</button>
+
+<!-- Popup -->
+<div class="popup" id="popup">
+  <div class="popup-content">
+    <h2>إعدادات اللوحة الجديدة</h2>
+    <label>العرض (px): <input type="number" id="canvasWidth" value="1024" min="100" max="5000"></label>
+    <label>الارتفاع (px): <input type="number" id="canvasHeight" value="768" min="100" max="5000"></label>
+    <label>النوع:
+      <select id="canvasType">
+        <option value="normal">عادي</option>
+        <option value="pixel">Pixel Art</option>
+      </select>
+    </label>
+    <div class="popup-buttons">
+      <button id="cancelBtn">إلغاء</button>
+      <button id="startBtn">ابدأ الرسم</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const createBtn = document.getElementById('createBtn');
+const popup = document.getElementById('popup');
+const cancelBtn = document.getElementById('cancelBtn');
+const startBtn = document.getElementById('startBtn');
+
+createBtn.onclick = ()=> popup.style.display = 'flex';
+cancelBtn.onclick = ()=> popup.style.display = 'none';
+
+startBtn.onclick = ()=>{
+  const width = document.getElementById('canvasWidth').value;
+  const height = document.getElementById('canvasHeight').value;
+  const type = document.getElementById('canvasType').value;
+
+  localStorage.setItem('naiCanvasWidth', width);
+  localStorage.setItem('naiCanvasHeight', height);
+  localStorage.setItem('naiCanvasType', type);
+
+  window.location.href = "drawing.html";
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>لوحة رسم — Neon Blue</title>
+<style>
+  :root{
+    --bg:#010114;
+    --panel:#06102a;
+    --accent1:#0af;
+    --accent2:#6bf;
+    --white:#eaf6ff;
+    --glass: rgba(255,255,255,0.04);
+  }
+  *{box-sizing:border-box;font-family: "Poppins", system-ui, sans-serif}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#000016);color:var(--white)}
+  .app{
+    display:flex;
+    gap:14px;
+    padding:18px;
+    height:100vh;
+  }
+
+  /* لوحة الادوات الشمال (أو اليمين حسب dir) */
+  .sidebar{
+    width:320px;
+    max-width:40%;
+    background:linear-gradient(180deg, rgba(8,16,40,0.6), rgba(6,10,26,0.55));
+    border:1px solid rgba(10,40,90,0.18);
+    border-radius:12px;
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    backdrop-filter: blur(6px);
+  }
+  .logo{
+    display:flex;align-items:center;gap:10px;
+  }
+  .logo .mark{
+    width:46px;height:46px;border-radius:10px;
+    background:linear-gradient(135deg,var(--accent1),var(--accent2));
+    box-shadow:0 6px 30px rgba(10,150,255,0.14), inset 0 -6px 20px rgba(255,255,255,0.06);
+    display:flex;align-items:center;justify-content:center;color:#001;
+    font-weight:700;font-size:20px;
+  }
+  h1{margin:0;font-size:16px}
+  .controls{display:flex;flex-direction:column;gap:8px}
+
+  .row{display:flex;gap:8px;align-items:center}
+  .big{font-size:13px}
+  input[type=range]{width:100%}
+  button{
+    background:linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    border:1px solid rgba(160,200,255,0.06);
+    color:var(--white);padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:600;
+  }
+  .btn-primary{
+    background:linear-gradient(90deg,var(--accent1),var(--accent2));
+    color:#001;border:none;box-shadow:0 6px 20px rgba(10,140,255,0.12);
+  }
+  .tools{
+    display:flex;gap:8px;flex-wrap:wrap;
+  }
+  .tool{
+    display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:8px;
+    min-width:64px;align-items:center;justify-content:center;
+    background:var(--glass);border:1px solid rgba(255,255,255,0.02)
+  }
+
+  /* مركز الرسم */
+  .stage{
+    flex:1;
+    position:relative;
+    border-radius:12px;
+    overflow:hidden;
+    display:flex;flex-direction:column;
+    border:1px solid rgba(10,30,70,0.14);
+    background:linear-gradient(180deg, rgba(2,6,20,0.85), rgba(0,0,6,0.6));
+  }
+
+  /* شريط اعلى */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.03);
+    gap:10px;
+  }
+  .canvas-wrap{position:relative;flex:1;display:flex;align-items:center;justify-content:center;background:
+    radial-gradient(ellipse at center, rgba(10,20,40,0.2) 0%, rgba(0,0,7,0.6) 40%, transparent 60%);}
+
+  /* طبقات متراكبة */
+  .layer{
+    position:absolute;left:0;top:0;
+  }
+
+  /* لوحة الطبقات */
+  .layers-panel{
+    background:linear-gradient(180deg, rgba(1,8,22,0.35), rgba(3,8,12,0.25));
+    border-radius:8px;padding:8px;border:1px solid rgba(10,30,70,0.12);max-height:320px;overflow:auto;
+  }
+  .layer-item{
+    display:flex;gap:8px;align-items:center;padding:8px;border-radius:8px;margin-bottom:6px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.0));
+    border:1px solid rgba(255,255,255,0.02);
+  }
+  .layer-thumb{width:46px;height:32px;border-radius:6px;background:linear-gradient(45deg,#001,#002);overflow:hidden;display:flex;align-items:center;justify-content:center;color:#77b;}
+  .layer-meta{flex:1;display:flex;flex-direction:column}
+  .layer-actions{display:flex;gap:6px;align-items:center}
+  .small{font-size:12px;color:rgba(230,240,255,0.9)}
+
+  /* موبايل */
+  @media (max-width:900px){
+    .app{flex-direction:column;padding:8px}
+    .sidebar{width:100%;max-width:100%;order:2}
+    .stage{order:1;height:60vh}
+  }
+
+  /* تأثير نيون خفيف */
+  .neon {
+    text-shadow:0 0 8px rgba(10,170,255,0.25), 0 0 20px rgba(80,150,255,0.06);
+    color:var(--white);
+  }
+</style>
+</head>
+<body>
+<div class="app" aria-live="polite">
+  <aside class="sidebar" role="complementary">
+    <div class="logo">
+      <div class="mark">R</div>
+      <div>
+        <h1 class="neon">لوحة رسم — Neon Blue</h1>
+        <div class="small">نظام طبقات · حفظ تلقائي · تصدير PNG</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="row">
+        <label class="big">أداة:</label>
+        <div class="tools" style="flex:1">
+          <button id="brushBtn" class="tool">✏️ فرشاة</button>
+          <button id="eraserBtn" class="tool">🧽 ممحاة</button>
+          <button id="moveBtn" class="tool">✋ نقل</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label class="big">اللون:</label>
+        <input id="color" type="color" value="#00bfff" style="width:64px;height:36px;padding:2px;border-radius:8px;border:none;background:#000"/>
+        <button id="whiteBtn" class="btn-primary" title="أبيض">أبيض</button>
+      </div>
+
+      <div class="row">
+        <label class="big">حجم الفرشاة:</label>
+        <input id="size" type="range" min="1" max="120" value="8"/>
+        <div style="width:52px;text-align:center" id="sizeVal">8</div>
+      </div>
+
+      <div class="row">
+        <label class="big">شفافية الطبقة:</label>
+        <input id="opacity" type="range" min="0" max="100" value="100"/>
+        <div style="width:52px;text-align:center" id="opacityVal">100%</div>
+      </div>
+
+      <div class="row">
+        <button id="addLayer" class="btn-primary" style="flex:1">+ إضافة طبقة</button>
+        <button id="exportBtn" style="flex:1">تحميل PNG</button>
+      </div>
+
+      <div class="row">
+        <button id="clearLayer" style="flex:1">مسح الطبقة</button>
+        <button id="flattenBtn" style="flex:1">دمج الطبقات وحفظ</button>
+      </div>
+
+      <div>
+        <div class="small" style="margin-bottom:8px">الطبقات</div>
+        <div class="layers-panel" id="layersPanel" aria-live="polite"></div>
+      </div>
+
+      <div class="small" style="opacity:0.8">ملاحظة: السحب/الرسم يعمل باللمس والفأرة. يتم الحفظ تلقائيًا في التخزين المحلي للمتصفح.</div>
+    </div>
+  </aside>
+
+  <main class="stage" role="main">
+    <div class="topbar">
+      <div class="small">حجم منطقة الرسم: <span id="canvasSizeLabel">1024 × 768</span></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="undoBtn">تراجع</button>
+        <button id="redoBtn">إعادة</button>
+        <button id="downloadLayers">تحميل كل اللايرز (ZIP)</button>
+      </div>
+    </div>
+
+    <div class="canvas-wrap" id="canvasWrap">
+      <!-- canvases سيتم اضافتها ديناميكيًا -->
+    </div>
+  </main>
+</div>
+
+<script>
+/* ====== إعدادات ابتدائية ====== */
+const DEFAULT_WIDTH = 1024;
+const DEFAULT_HEIGHT = 768;
+
+const canvasWrap = document.getElementById('canvasWrap');
+const layersPanel = document.getElementById('layersPanel');
+
+let layers = []; // مصفوفة الطبقات {id, canvas, ctx, name, visible, locked, opacity}
+let activeLayerId = null;
+let tool = 'brush'; // brush | eraser | move
+let colorInput = document.getElementById('color');
+const sizeInput = document.getElementById('size');
+const sizeVal = document.getElementById('sizeVal');
+const opacityInput = document.getElementById('opacity');
+const opacityVal = document.getElementById('opacityVal');
+
+sizeInput.oninput = ()=> sizeVal.textContent = sizeInput.value;
+opacityInput.oninput = ()=> opacityVal.textContent = opacityInput.value + '%';
+
+document.getElementById('brushBtn').onclick = ()=> setTool('brush');
+document.getElementById('eraserBtn').onclick = ()=> setTool('eraser');
+document.getElementById('moveBtn').onclick = ()=> setTool('move');
+document.getElementById('whiteBtn').onclick = ()=> { colorInput.value = '#ffffff'; }
+
+document.getElementById('addLayer').onclick = ()=> addLayer();
+document.getElementById('exportBtn').onclick = ()=> exportPNG();
+document.getElementById('clearLayer').onclick = ()=> clearActiveLayer();
+document.getElementById('flattenBtn').onclick = ()=> exportFlattenedPNG();
+document.getElementById('undoBtn').onclick = ()=> undo();
+document.getElementById('redoBtn').onclick = ()=> redo();
+
+document.getElementById('downloadLayers').onclick = ()=> downloadLayersAsImages();
+
+document.getElementById('canvasSizeLabel').textContent = DEFAULT_WIDTH + ' × ' + DEFAULT_HEIGHT;
+
+/* ====== إدارة الطبقات ====== */
+function createCanvasLayer(w=DEFAULT_WIDTH,h=DEFAULT_HEIGHT){
+  const c = document.createElement('canvas');
+  c.className = 'layer';
+  c.width = w; c.height = h;
+  c.style.width = '100%'; c.style.height = '100%';
+  c.style.pointerEvents = 'auto';
+  c.style.zIndex = 1;
+  const ctx = c.getContext('2d', {alpha:true});
+  ctx.lineCap = ctx.lineJoin = 'round';
+  return {canvas:c,ctx};
+}
+
+function addLayer(opts={}){
+  const id = 'layer_'+Date.now();
+  const {canvas,ctx} = createCanvasLayer();
+  canvasWrap.appendChild(canvas);
+  const layer = {
+    id, canvas, ctx,
+    name: opts.name || 'طبقة ' + (layers.length+1),
+    visible: true,
+    locked: false,
+    opacity: 1
+  };
+  layers.push(layer);
+  activeLayerId = id;
+  refreshLayersUI();
+  saveStateDebounced();
+  pushHistory(); // حفظ للتراجع
+  attachPointerEvents(canvas, layer);
+  updateCanvasSizes();
+  return layer;
+}
+
+function removeLayer(id){
+  const idx = layers.findIndex(l=>l.id===id);
+  if(idx===-1) return;
+  const layer = layers[idx];
+  canvasWrap.removeChild(layer.canvas);
+  layers.splice(idx,1);
+  if(layers.length) activeLayerId = layers[layers.length-1].id; else activeLayerId = null;
+  refreshLayersUI();
+  pushHistory();
+  saveStateDebounced();
+}
+
+function duplicateLayer(id){
+  const orig = layers.find(l=>l.id===id);
+  if(!orig) return;
+  const {canvas,ctx} = createCanvasLayer();
+  canvas.width = orig.canvas.width;
+  canvas.height = orig.canvas.height;
+  ctx.drawImage(orig.canvas,0,0);
+  canvasWrap.appendChild(canvas);
+  const layer = {
+    id:'layer_'+Date.now(),
+    canvas,ctx,
+    name: orig.name + ' (نسخة)',
+    visible: orig.visible,
+    locked: orig.locked,
+    opacity: orig.opacity
+  };
+  layers.push(layer);
+  activeLayerId = layer.id;
+  attachPointerEvents(canvas, layer);
+  refreshLayersUI();
+  pushHistory();
+  saveStateDebounced();
+}
+
+function moveLayerUp(id){
+  const i = layers.findIndex(l=>l.id===id);
+  if(i<0 || i===layers.length-1) return;
+  const temp = layers[i]; layers[i]=layers[i+1]; layers[i+1]=temp;
+  reorderCanvases();
+  refreshLayersUI();
+  pushHistory();
+  saveStateDebounced();
+}
+function moveLayerDown(id){
+  const i = layers.findIndex(l=>l.id===id);
+  if(i<=0) return;
+  const temp = layers[i]; layers[i]=layers[i-1]; layers[i-1]=temp;
+  reorderCanvases();
+  refreshLayersUI();
+  pushHistory();
+  saveStateDebounced();
+}
+
+function reorderCanvases(){
+  // z-index حسب ترتيب المصفوفة
+  layers.forEach((l, idx)=>{
+    l.canvas.style.zIndex = idx+1;
+  });
+}
+
+/* ====== UI تحديث اللوحة ====== */
+function refreshLayersUI(){
+  layersPanel.innerHTML = '';
+  // عرض من الأعلى للأسفل (آخر في المصفوفة هو الأعلى)
+  for(let i=layers.length-1;i>=0;i--){
+    const layer = layers[i];
+    const item = document.createElement('div');
+    item.className = 'layer-item';
+    item.style.opacity = layer.visible?1:0.5;
+    if(layer.id === activeLayerId) item.style.outline = '2px solid rgba(10,180,255,0.12)';
+    const thumb = document.createElement('div');
+    thumb.className = 'layer-thumb';
+    // توليد صورة مصغرة من الكانفاس
+    try{
+      const data = layer.canvas.toDataURL();
+      thumb.style.backgroundImage = `url(${data})`;
+      thumb.style.backgroundSize = 'cover';
+    }catch(e){}
+    const meta = document.createElement('div'); meta.className='layer-meta';
+    const title = document.createElement('div'); title.textContent = layer.name; title.className='small';
+    const info = document.createElement('div'); info.className='small'; info.style.opacity=0.8;
+    info.textContent = `شفافية: ${Math.round(layer.opacity*100)}% ${layer.locked? ' · مقفول':''}${!layer.visible? ' · مخفي':''}`;
+    meta.appendChild(title); meta.appendChild(info);
+
+    const actions = document.createElement('div'); actions.className='layer-actions';
+    const visBtn = document.createElement('button'); visBtn.textContent = layer.visible? '👁' : '🙈';
+    visBtn.title = 'اظهار/اخفاء'; visBtn.onclick = ()=> { layer.visible = !layer.visible; layer.canvas.style.display = layer.visible? 'block':'none'; refreshLayersUI(); saveStateDebounced(); pushHistory(); };
+    const lockBtn = document.createElement('button'); lockBtn.textContent = layer.locked? '🔒':'🔓';
+    lockBtn.title='قفل/فتح'; lockBtn.onclick = ()=> { layer.locked = !layer.locked; refreshLayersUI(); saveStateDebounced(); pushHistory(); };
+    const dupBtn = document.createElement('button'); dupBtn.textContent='⎘'; dupBtn.title='تكرار';
+    dupBtn.onclick = ()=> duplicateLayer(layer.id);
+    const upBtn = document.createElement('button'); upBtn.textContent='⬆'; upBtn.onclick = ()=> moveLayerUp(layer.id);
+    const downBtn = document.createElement('button'); downBtn.textContent='⬇'; downBtn.onclick = ()=> moveLayerDown(layer.id);
+    const delBtn = document.createElement('button'); delBtn.textContent='🗑'; delBtn.onclick = ()=> { if(confirm('حذف الطبقة؟')) removeLayer(layer.id); };
+
+    // opacity slider لكل طبقة (صغير)
+    const op = document.createElement('input'); op.type='range'; op.min=0; op.max=100; op.value = Math.round(layer.opacity*100);
+    op.style.width='90px'; op.oninput = ()=> { layer.opacity = op.value/100; layer.canvas.style.opacity = layer.opacity; refreshLayersUI(); saveStateDebounced(); pushHistory(); }
+
+    actions.appendChild(visBtn); actions.appendChild(lockBtn); actions.appendChild(dupBtn);
+    actions.appendChild(upBtn); actions.appendChild(downBtn); actions.appendChild(delBtn);
+    actions.appendChild(op);
+
+    item.appendChild(thumb); item.appendChild(meta); item.appendChild(actions);
+
+    // اختيار الطبقة عند النقر
+    item.onclick = (e)=> {
+      // لا نغير الاختيار لو ضغط على زر داخل العنصر
+      if(e.target.tagName.toLowerCase()==='button' || e.target.tagName.toLowerCase()==='input') return;
+      activeLayerId = layer.id;
+      refreshLayersUI();
+    };
+
+    layersPanel.appendChild(item);
+  }
+}
+
+/* ====== أحداث الرسم ====== */
+function attachPointerEvents(canvas, layer){
+  // دعم اللمس والفأرة
+  let drawing = false;
+  let last = null;
+  let pointers = {}; // لدعم اللمس المتعدد (نفرّق بإصدار pointerId)
+  function getPos(e){
+    const rect = canvas.getBoundingClientRect();
+    if(e.touches && e.touches[0]) {
+      const t = e.touches[0];
+      return {x:(t.clientX-rect.left)*(canvas.width/rect.width), y:(t.clientY-rect.top)*(canvas.height/rect.height)};
+    } else if(e.clientX!==undefined){
+      return {x:(e.clientX-rect.left)*(canvas.width/rect.width), y:(e.clientY-rect.top)*(canvas.height/rect.height)};
+    } else return null;
+  }
+
+  function startDraw(e){
+    if(layer.locked) return;
+    e.preventDefault();
+    drawing = true;
+    last = getPos(e);
+    drawLine(last, last, layer); // نقطه
+    pushHistory();
+  }
+  function moveDraw(e){
+    if(!drawing) return;
+    e.preventDefault();
+    const pos = getPos(e);
+    if(!pos) return;
+    drawLine(last, pos, layer);
+    last = pos;
+  }
+  function endDraw(e){
+    if(!drawing) return;
+    drawing=false; last=null;
+    saveStateDebounced();
+  }
+
+  // دعم pointer events
+  canvas.addEventListener('pointerdown', (ev)=>{
+    if(tool==='move') return; // لا نرسم
+    canvas.setPointerCapture && canvas.setPointerCapture(ev.pointerId);
+    startDraw(ev);
+  });
+  canvas.addEventListener('pointermove', (ev)=> {
+    if(tool==='move') return;
+    moveDraw(ev);
+  });
+  canvas.addEventListener('pointerup', (ev)=> { endDraw(ev); canvas.releasePointerCapture && canvas.releasePointerCapture(ev.pointerId); });
+  canvas.addEventListener('pointercancel', (ev)=> endDraw(ev));
+
+  // لمنع التمرير على اللمس
+  canvas.addEventListener('touchstart', (e)=> e.preventDefault(), {passive:false});
+}
+
+function drawLine(from, to, layer){
+  const ctx = layer.ctx;
+  ctx.save();
+  const sz = parseInt(sizeInput.value,10) || 8;
+  ctx.lineWidth = sz;
+  if(tool==='eraser'){
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.strokeStyle = 'rgba(0,0,0,1)';
+  } else {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = colorInput.value || '#00bfff';
+  }
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+  ctx.lineTo(to.x, to.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* ====== أدوات وادخال المستخدم ====== */
+function setTool(t){
+  tool = t;
+  document.getElementById('brushBtn').style.outline = t==='brush'? '2px solid rgba(10,180,255,0.15)':'';
+  document.getElementById('eraserBtn').style.outline = t==='eraser'? '2px solid rgba(10,180,255,0.15)':'';
+  document.getElementById('moveBtn').style.outline = t==='move'? '2px solid rgba(10,180,255,0.15)':'';
+  // لو move: نسمح بس بسحب الصفحة، لكن للاختصار لم أضف تحريك عناصر
+}
+
+setTool('brush');
+
+/* ====== مسح / دمج / تصدير ====== */
+function clearActiveLayer(){
+  const layer = layers.find(l=>l.id===activeLayerId);
+  if(!layer) return alert('لا توجد طبقة مختارة');
+  const c = layer.canvas;
+  layer.ctx.clearRect(0,0,c.width,c.height);
+  saveStateDebounced(); pushHistory();
+}
+
+function exportPNG(){
+  // نجمع كل الطبقات على كانفاس مؤقت
+  if(layers.length===0) return alert('ماكو طبقات');
+  const w = layers[0].canvas.width, h = layers[0].canvas.height;
+  const out = document.createElement('canvas'); out.width=w; out.height=h;
+  const octx = out.getContext('2d');
+  // رسم من الأسفل للأعلى
+  for(const l of layers){
+    if(!l.visible) continue;
+    octx.globalAlpha = l.opacity;
+    octx.drawImage(l.canvas,0,0);
+  }
+  const data = out.toDataURL('image/png');
+  const a = document.createElement('a'); a.href=data; a.download='drawing.png'; a.click();
+}
+
+function exportFlattenedPNG(){
+  exportPNG();
+}
+
+/* ====== حفظ تلقائي واستعادة ====== */
+const STORAGE_KEY = 'neon_draw_v1';
+let saveTimeout = null;
+function saveState(){
+  try{
+    const payload = {
+      width: DEFAULT_WIDTH,
+      height: DEFAULT_HEIGHT,
+      layers: layers.map(l=>{
+        return {id:l.id,name:l.name,visible:l.visible,locked:l.locked,opacity:l.opacity,data: l.canvas.toDataURL()};
+      })
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    //console.log('saved');
+  }catch(e){ console.warn('save failed',e) }
+}
+function saveStateDebounced(){
+  if(saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(saveState, 600);
+}
+
+function loadState(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(!raw) return false;
+  try{
+    const data = JSON.parse(raw);
+    // تفريغ أي طبقات حالية
+    layers.forEach(l=> canvasWrap.removeChild(l.canvas));
+    layers = [];
+    for(const li of data.layers){
+      const {canvas,ctx} = createCanvasLayer();
+      canvasWrap.appendChild(canvas);
+      const layer = { id: li.id, canvas, ctx, name:li.name, visible:li.visible, locked:li.locked, opacity: li.opacity || 1 };
+      // تحميل الصورة
+      if(li.data){
+        const img = new Image();
+        img.onload = ()=> {
+          ctx.clearRect(0,0,canvas.width,canvas.height);
+          ctx.drawImage(img,0,0);
+        };
+        img.src = li.data;
+      }
+      canvas.style.display = layer.visible? 'block':'none';
+      canvas.style.opacity = layer.opacity;
+      attachPointerEvents(canvas, layer);
+      layers.push(layer);
+    }
+    activeLayerId = layers.length? layers[layers.length-1].id : null;
+    reorderCanvases();
+    refreshLayersUI();
+    return true;
+  }catch(e){ console.warn('load failed',e); return false; }
+}
+
+/* ====== مساعدة: مسح كل شيء وتهيئة ====== */
+function resetAll(){
+  layers.forEach(l=> canvasWrap.removeChild(l.canvas));
+  layers = [];
+  activeLayerId = null;
+  refreshLayersUI();
+}
+
+function init(){
+  // تهيئة الحاوية بحجم مناسب
+  canvasWrap.style.width = '100%';
+  canvasWrap.style.height = 'calc(100% - 0px)';
+
+  // حاول التحميل من التخزين، وإلا أنشئ طبقة افتراضية
+  const ok = loadState();
+  if(!ok){
+    addLayer({name:'الخلفية'});
+    addLayer({name:'الرسم 1'});
+  }
+  refreshLayersUI();
+  updateCanvasSizes();
+  window.addEventListener('resize', updateCanvasSizes);
+}
+init();
+
+/* ====== تغيير حجم الكانفاس ليتناسب مع العنصر (مقاس ثابت داخلي) ====== */
+function updateCanvasSizes(){
+  // نحتفظ بالعرض والارتفاع الافتراضيين داخل الكانفاس، لكن نكبر/نصغر العرض بالبكسل
+  const rect = canvasWrap.getBoundingClientRect();
+  const scale = Math.min(rect.width / DEFAULT_WIDTH, rect.height / DEFAULT_HEIGHT);
+  const displayW = DEFAULT_WIDTH * scale;
+  const displayH = DEFAULT_HEIGHT * scale;
+  // ضبط عنصر الحاوية ليظهر بشكل مركزي
+  canvasWrap.style.justifyContent = 'center';
+  canvasWrap.style.alignItems = 'center';
+
+  // ضبط ستايل لكل كانفاس ليعرض بالحجم المناسب (الخريطة الداخلية لا تتغير)
+  layers.forEach((l)=>{
+    l.canvas.style.width = displayW + 'px';
+    l.canvas.style.height = displayH + 'px';
+    l.canvas.style.pointerEvents = l.visible? 'auto' : 'none';
+  });
+}
+
+/* ====== تراجع / اعادة — نسخ احتياطي بسيط ====== */
+let history = [];
+let historyIndex = -1;
+function pushHistory(){
+  // تخزين نسخة مبسطة: لكل كانفاس صورة dataURL
+  const snapshot = layers.map(l=> ({id:l.id, name:l.name, visible:l.visible, locked:l.locked, opacity:l.opacity, data: l.canvas.toDataURL()}));
+  history = history.slice(0, historyIndex+1);
+  history.push(snapshot);
+  historyIndex = history.length-1;
+  if(history.length>30) history.shift();
+}
+function applySnapshot(snap){
+  if(!snap) return;
+  // تهيئة
+  resetAll();
+  for(const li of snap){
+    const {canvas,ctx} = createCanvasLayer();
+    canvasWrap.appendChild(canvas);
+    const layer = { id: li.id, canvas, ctx, name:li.name, visible:li.visible, locked:li.locked, opacity: li.opacity || 1 };
+    if(li.data){
+      const img = new Image();
+      img.onload = ()=> ctx.drawImage(img,0,0);
+      img.src = li.data;
+    }
+    canvas.style.display = layer.visible? 'block':'none';
+    canvas.style.opacity = layer.opacity;
+    attachPointerEvents(canvas, layer);
+    layers.push(layer);
+  }
+  activeLayerId = layers.length? layers[layers.length-1].id : null;
+  reorderCanvases();
+  refreshLayersUI();
+}
+function undo(){
+  if(historyIndex<=0) return;
+  historyIndex--;
+  applySnapshot(history[historyIndex]);
+  saveStateDebounced();
+}
+function redo(){
+  if(historyIndex>=history.length-1) return;
+  historyIndex++;
+  applySnapshot(history[historyIndex]);
+  saveStateDebounced();
+}
+
+/* ====== تنزيل كل اللايرز كصور منفصلة (بسيط، بدون ZIP حقيقي) ====== */
+function downloadLayersAsImages(){
+  if(layers.length===0) return alert('ماكو طبقات');
+  layers.forEach((l, idx)=>{
+    const a = document.createElement('a');
+    a.href = l.canvas.toDataURL();
+    a.download = (l.name||'layer') + '_' + (idx+1) + '.png';
+    a.click();
+  });
+}
+
+/* ====== تحميل/حفظ يدوي (أزرار إضافية ممكن إضافتها) ====== */
+/* لمزيد من الميزات: حفظ إلى خادم أو zip، أو أدوات فرش متقدمة، أو ضبط الأدلة. */
+
+</script>
+</body>
+</html>
